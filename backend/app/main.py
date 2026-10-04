@@ -25,6 +25,21 @@ from app.models.exercise import Exercise
 from app.models.workout import Workout
 from app.models.exercise_log import ExerciseLog
 from app.routes.workout import router as workout_router
+from app.models.activity import Activity
+from app.routes.activity import router as activity_router
+from app.models.sleep_log import SleepLog
+from app.routes.sleep import router as sleep_router
+from app.models.body_measurement import BodyMeasurement
+from app.routes.body_measurement import router as body_measurement_router
+from app.models.progress_photo import ProgressPhoto
+from app.routes.progress_photo import router as progress_photo_router
+from app.routes.analytics import router as analytics_router
+from app.models.ai_recommendation import AIRecommendation
+from app.routes.recommendations import router as recommendations_router
+from app.routes.reports import router as reports_router
+from app.models.notification import Notification
+from app.routes.notifications import router as notifications_router
+from app.routes.dashboard import router as dashboard_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -48,6 +63,15 @@ app.include_router(weight_router)
 app.include_router(water_router)
 app.include_router(supplement_router)
 app.include_router(workout_router)
+app.include_router(activity_router)
+app.include_router(sleep_router)
+app.include_router(body_measurement_router)
+app.include_router(progress_photo_router)
+app.include_router(analytics_router)
+app.include_router(recommendations_router)
+app.include_router(reports_router)
+app.include_router(notifications_router)
+app.include_router(dashboard_router)
 
 @app.get("/")
 def root():
