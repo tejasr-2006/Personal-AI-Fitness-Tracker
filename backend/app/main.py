@@ -40,6 +40,7 @@ from app.routes.reports import router as reports_router
 from app.models.notification import Notification
 from app.routes.notifications import router as notifications_router
 from app.routes.dashboard import router as dashboard_router
+from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(bind=engine)
 
@@ -47,6 +48,17 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Personal AI Fitness Assistant",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
