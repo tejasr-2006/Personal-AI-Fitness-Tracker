@@ -29,6 +29,8 @@ def calculate_daily_totals(
 
     return {
         "date": meal_date,
+        "calories_target": target_calories,
+        "protein_target": target_protein,
         "calories_consumed": round(calories, 2),
         "calories_remaining": (
             round(max(target_calories - calories, 0), 2)

@@ -1,12 +1,12 @@
-import json
-import os
 
-from google import genai
+from app.services.ai_client import generate_json
 
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+def _num(value):
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def parse_food_text(text: str):
@@ -44,11 +44,20 @@ Rules:
 - All nutrition values must be numbers.
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-
-    result = json.loads(response.text)
-
-    return result["items"]
+    result = generate_json(prompt)
+    items = result.get("items", []) if isinstance(result, dict) else result
+    cleaned = []
+    for item in items:
+        if not isinstance(item, dict) or not item.get("food_name"):
+            continue
+        cleaned.append({
+            "food_name": str(item["food_name"])[:200],
+            "quantity": _num(item.get("quantity")),
+            "unit": item.get("unit") and str(item["unit"])[:50],
+            "calories": _num(item.get("calories")),
+            "protein": _num(item.get("protein")),
+            "carbohydrates": _num(item.get("carbohydrates")),
+            "fat": _num(item.get("fat")),
+            "fiber": _num(item.get("fiber")),
+        })
+    return cleaned

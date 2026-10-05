@@ -64,3 +64,28 @@ def get_profile(
         )
 
     return profile
+
+@router.put(
+    "",
+    response_model=ProfileResponse
+)
+def upsert_profile(
+    data: ProfileCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    profile = db.query(Profile).filter(
+        Profile.user_id == current_user.id
+    ).first()
+
+    if profile:
+        for key, value in data.model_dump().items():
+            setattr(profile, key, value)
+    else:
+        profile = Profile(user_id=current_user.id, **data.model_dump())
+        db.add(profile)
+
+    db.commit()
+    db.refresh(profile)
+
+    return profile

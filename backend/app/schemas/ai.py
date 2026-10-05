@@ -1,9 +1,12 @@
+import datetime as dt
+
 from pydantic import BaseModel
 
 
 class FoodLogRequest(BaseModel):
     text: str
     meal_type: str | None = None
+    date: dt.date | None = None
 
 
 class FoodItemAI(BaseModel):

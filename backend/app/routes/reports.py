@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -7,7 +7,17 @@ from app.models.profile import Profile
 from app.models.goal import Goal
 from app.services.analytics_service import get_progress_summary
 from app.services.report_service import generate_fitness_report
+from app.services.ai_client import AIUnavailable
 from app.utils.auth import get_current_user
+
+
+def _ai_call(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except AIUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception:
+        raise HTTPException(status_code=502, detail="The AI service failed. Please try again.")
 
 
 router = APIRouter(
@@ -34,19 +44,18 @@ def weekly_report(
     )
 
     if not profile:
-        return {"error": "Complete your profile first"}
+        raise HTTPException(status_code=409, detail="Complete your profile first.")
 
     if not goal:
-        return {
-            "error": "Calculate your fitness goals first"
-        }
+        raise HTTPException(status_code=409, detail="Calculate your fitness goals first.")
 
     progress = get_progress_summary(
         db=db,
-        user_id=current_user.id
+        user_id=current_user.id,
+        days=7
     )
 
-    return generate_fitness_report(
+    return _ai_call(generate_fitness_report,
         profile=profile,
         goal=goal,
         progress=progress,
@@ -71,21 +80,20 @@ def monthly_report(
     )
 
     if not profile:
-        return {"error": "Complete your profile first"}
+        raise HTTPException(status_code=409, detail="Complete your profile first.")
 
     if not goal:
-        return {
-            "error": "Calculate your fitness goals first"
-        }
+        raise HTTPException(status_code=409, detail="Calculate your fitness goals first.")
 
     progress = get_progress_summary(
         db=db,
-        user_id=current_user.id
+        user_id=current_user.id,
+        days=30
     )
 
-    return generate_fitness_report(
+    return _ai_call(generate_fitness_report,
         profile=profile,
         goal=goal,
         progress=progress,
         period="monthly"
-    )    
+    )

@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -12,7 +12,18 @@ from app.services.analytics_service import get_progress_summary
 from app.services.recommendation_service import (
     generate_recommendations
 )
+from app.services.ai_client import AIUnavailable
+from app.schemas.recommendation import RecommendationResponse
 from app.utils.auth import get_current_user
+
+
+def _ai_call(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except AIUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception:
+        raise HTTPException(status_code=502, detail="The AI service failed. Please try again.")
 
 
 router = APIRouter(
@@ -39,27 +50,26 @@ def generate_ai_recommendations(
     )
 
     if not profile:
-        return {"error": "Complete your profile first"}
+        raise HTTPException(status_code=409, detail="Complete your profile first.")
 
     if not goal:
-        return {
-            "error": "Calculate your fitness goals first"
-        }
+        raise HTTPException(status_code=409, detail="Calculate your fitness goals first.")
 
     progress = get_progress_summary(
         db=db,
         user_id=current_user.id
     )
 
-    result = generate_recommendations(
+    result = _ai_call(generate_recommendations,
         profile=profile,
         goal=goal,
         progress=progress
     )
 
     recommendations = []
+    items = result if isinstance(result, list) else result.get("recommendations", [])
 
-    for item in result.get("recommendations", []):
+    for item in items:
         recommendation = AIRecommendation(
             user_id=current_user.id,
             date=date.today(),
@@ -76,18 +86,21 @@ def generate_ai_recommendations(
         recommendations.append(recommendation)
 
     db.commit()
+    for recommendation in recommendations:
+        db.refresh(recommendation)
 
     return {
         "message": "Recommendations generated",
-        "recommendations": result.get(
-            "recommendations",
-            []
-        )
+        "recommendations": [
+            RecommendationResponse.model_validate(r).model_dump(mode="json")
+            for r in recommendations
+        ]
     }
 
 
 @router.get(
     "",
+    response_model=list[RecommendationResponse]
 )
 def get_recommendations(
     current_user: User = Depends(get_current_user),

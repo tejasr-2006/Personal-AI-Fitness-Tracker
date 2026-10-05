@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.database import engine, Base
+import app.models  # noqa: F401  (registers every table)
 from app.models.user import User
 from app.routes.auth import router as auth_router
 from app.routes.user import router as user_router
@@ -40,8 +41,14 @@ from app.models.notification import Notification
 from app.routes.notifications import router as notifications_router
 from app.routes.dashboard import router as dashboard_router
 from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+from app.database import SessionLocal
+from app.services.seed import seed_exercises
 
 Base.metadata.create_all(bind=engine)
+
+with SessionLocal() as _db:
+    seed_exercises(_db)
 
 
 app = FastAPI(
@@ -51,10 +58,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

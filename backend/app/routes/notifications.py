@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -67,9 +67,7 @@ def mark_notification_read(
     )
 
     if not notification:
-        return {
-            "error": "Notification not found"
-        }
+        raise HTTPException(status_code=404, detail="Notification not found")
 
     notification.is_read = True
 

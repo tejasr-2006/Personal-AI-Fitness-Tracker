@@ -113,3 +113,39 @@ def add_exercise_to_workout(
     db.refresh(exercise_log)
 
     return exercise_log
+
+@router.get("/{workout_id}/exercises")
+def get_workout_exercises(
+    workout_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    workout = db.query(Workout).filter(
+        Workout.id == workout_id,
+        Workout.user_id == current_user.id
+    ).first()
+
+    if not workout:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    rows = (
+        db.query(ExerciseLog, Exercise)
+        .join(Exercise, Exercise.id == ExerciseLog.exercise_id)
+        .filter(ExerciseLog.workout_id == workout.id)
+        .order_by(ExerciseLog.id.asc())
+        .all()
+    )
+
+    return [
+        {
+            "id": log.id,
+            "exercise_id": log.exercise_id,
+            "name": exercise.name,
+            "muscle_group": exercise.muscle_group,
+            "sets": log.sets,
+            "reps": log.reps,
+            "weight": log.weight,
+            "duration_minutes": log.duration_minutes,
+        }
+        for log, exercise in rows
+    ]

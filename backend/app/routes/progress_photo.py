@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -79,7 +79,7 @@ def delete_progress_photo(
     )
 
     if not photo:
-        return {"error": "Photo not found"}
+        raise HTTPException(status_code=404, detail="Photo not found")
 
     db.delete(photo)
     db.commit()

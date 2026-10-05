@@ -1,10 +1,10 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class WeightCreate(BaseModel):
     date: date
-    weight: float
+    weight: float = Field(gt=20, lt=500)
 
 
 class WeightResponse(WeightCreate):

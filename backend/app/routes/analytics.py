@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -15,10 +15,12 @@ router = APIRouter(
 
 @router.get("/progress")
 def progress_dashboard(
+    days: int = Query(7, ge=1, le=365),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return get_progress_summary(
         db=db,
-        user_id=current_user.id
+        user_id=current_user.id,
+        days=days
     )

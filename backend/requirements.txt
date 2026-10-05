@@ -5,8 +5,8 @@ psycopg2-binary==2.9.*
 pydantic[email]==2.*
 pydantic-settings==2.*
 pyjwt==2.*
-bcrypt==4.*
-anthropic>=0.40
 alembic==1.*
 pytest
 httpx
+
+google-genai>=1.0

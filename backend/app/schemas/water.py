@@ -1,10 +1,10 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class WaterCreate(BaseModel):
     date: date
-    amount: float
+    amount: float = Field(gt=0, le=10000)
 
 
 class WaterResponse(WaterCreate):

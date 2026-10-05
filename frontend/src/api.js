@@ -1,731 +1,146 @@
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
-export async function getDashboard(token) {
-    const response = await fetch(`${API_URL}/dashboard`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to load dashboard");
+export class ApiError extends Error {
+    constructor(message, status) {
+        super(message);
+        this.status = status;
     }
-
-    return response.json();
 }
 
-export async function getProfile(token) {
-    const response = await fetch(`${API_URL}/profile`, {
-        method: "GET",
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (response.status === 404) {
-        return null;
+// FastAPI returns `detail` as a string, or (for 422) a list of {loc, msg} objects.
+function errorMessage(status, data) {
+    let detail = data?.detail ?? data?.message ?? (typeof data === "string" ? data : null);
+    if (Array.isArray(detail)) {
+        detail = detail
+            .map((d) => `${(d.loc || []).filter((x) => x !== "body").join(".")}: ${d.msg}`)
+            .join("; ");
     }
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to load profile");
-    }
-
-    return response.json();
+    if (detail) return detail;
+    if (status === 403) return "You do not have permission to perform this action.";
+    if (status === 404) return "The requested resource was not found.";
+    if (status === 422) return "Please check the submitted values.";
+    if (status >= 500) return "The server ran into a problem. Please try again.";
+    return `Request failed (${status}).`;
 }
 
-
-export async function createProfile(profileData) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/profile`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(profileData),
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to create profile");
-    }
-
-    return response.json();
+function token() {
+    return localStorage.getItem("token");
 }
 
-export async function calculateGoals() {
-    const token = localStorage.getItem("token");
+async function request(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (options.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+    }
+    const accessToken = token();
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 
-    const response = await fetch(`${API_URL}/goals/calculate`, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to calculate goals");
+    let response;
+    try {
+        response = await fetch(`${API_URL}${path}`, { ...options, headers });
+    } catch {
+        throw new ApiError("Unable to reach the server. Check the backend URL and your connection.", 0);
     }
 
-    return response.json();
-}
-
-
-export async function getGoals() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/goals`, {
-        method: "GET",
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to load goals");
+    if (response.status === 401 && accessToken) {
+        // Only treat 401 as "session expired" when we actually sent a token;
+        // a failed login also returns 401 and must show its own message.
+        localStorage.removeItem("token");
+        window.dispatchEvent(new Event("auth-expired"));
+        throw new ApiError("Your session has expired. Please log in again.", 401);
     }
 
-    return response.json();
-}
-
-export async function getMeals() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/meals`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
 
     if (!response.ok) {
-        throw new Error("Failed to load meals");
+        throw new ApiError(errorMessage(response.status, data), response.status);
     }
-
-    return response.json();
+    return data;
 }
 
-export async function addMeal(meal) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/meals`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(meal),
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to add meal");
-    }
-
-    return response.json();
-}
-
-export async function getDailyNutrition(date) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/nutrition/daily?nutrition_date=${date}`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to load nutrition");
-    }
-
-    return response.json();
-}
-
-export async function addWater(amount) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/water`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-            amount: amount,
-        }),
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to add water");
-    }
-
-    return response.json();
-}
-
-export async function getDailyWater() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/water/daily`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load water");
-    }
-
-    return response.json();
-}
-
-export async function getExercises() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/exercises`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load exercises");
-    }
-
-    return response.json();
-}
-
-export async function getWorkouts() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/workouts`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load workouts");
-    }
-
-    return response.json();
-}
-
-export async function createWorkout(workout) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/workouts`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(workout),
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to create workout");
-    }
-
-    return response.json();
-}
-
-export async function addExerciseToWorkout(workoutId, exercise) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/workouts/${workoutId}/exercises`,
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
-            },
-            body: JSON.stringify(exercise),
-        }
-    );
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to add exercise");
-    }
-
-    return response.json();
-}
-
-export async function getActivities() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/activities`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load activities");
-    }
-
-    return response.json();
-}
-
-export async function addActivity(activity) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/activities`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(activity),
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to add activity");
-    }
-
-    return response.json();
-}
-
-export async function getDailyActivities() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/activities/daily`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load daily activity");
-    }
-
-    return response.json();
-}
-export async function addSleep(data) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/sleep`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-        throw new Error(await response.text());
-    }
-
-    return response.json();
-}
-
-export async function getSleep() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/sleep`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load sleep");
-    }
-
-    return response.json();
-}
-
-export async function addWeight(weight) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/weight`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-            weight: Number(weight),
-        }),
-    });
-
-    if (!response.ok) {
-        throw new Error(await response.text());
-    }
-
-    return response.json();
-}
-
-export async function getWeight() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/weight`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load weight");
-    }
-
-    return response.json();
-}
-
-export async function addMeasurements(data) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/measurements`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-        throw new Error(await response.text());
-    }
-
-    return response.json();
-}
-
-export async function getMeasurements() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/measurements`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load measurements");
-    }
-
-    return response.json();
-}
-
-export async function addProgressPhoto(data) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/progress-photos`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-        throw new Error(await response.text());
-    }
-
-    return response.json();
-}
-
-export async function getProgressPhotos() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/progress-photos`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to load progress photos");
-    }
-
-    return response.json();
-}
-
-export async function aiFoodLog(text) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/ai/food-log`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ text }),
-    });
-
-    if (!response.ok) {
-        throw new Error(await response.text());
-    }
-
-    return response.json();
-}
-
-export async function getDietAdvice() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/ai/diet-advice`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to get diet advice");
-    }
-
-    return response.json();
-}
-
-export async function getTrainerAdvice() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/ai/trainer-advice`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to get trainer advice");
-    }
-
-    return response.json();
-}
-
-export async function sendCoachMessage(message) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_URL}/ai/coach`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message }),
-    });
-
-    if (!response.ok) {
-        throw new Error(await response.text());
-    }
-
-    return response.json();
-}
-
-export async function getDailyBriefing() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/ai/daily-briefing`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to get daily briefing");
-    }
-
-    return response.json();
-}
-
-export async function generateRecommendations() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/recommendations/generate`,
-        {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error(
-            await response.text()
-        );
-    }
-
-    return response.json();
-}
-
-export async function getRecommendations() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/recommendations`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error(
-            "Failed to load recommendations"
-        );
-    }
-
-    return response.json();
-}
-
-export async function getProgressAnalytics() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/analytics/progress`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to load analytics");
-    }
-
-    return response.json();
-}
-
-export async function getWeeklyReport() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/reports/weekly`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to load weekly report");
-    }
-
-    return response.json();
-}
-
-export async function getMonthlyReport() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/reports/monthly`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to load monthly report");
-    }
-
-    return response.json();
-}
-
-export async function generateNotifications() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/notifications/generate`,
-        {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error(
-            await response.text()
-        );
-    }
-
-    return response.json();
-}
-
-export async function getNotifications() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/notifications`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error(
-            "Failed to load notifications"
-        );
-    }
-
-    return response.json();
-}
-
-export async function markNotificationRead(id) {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/notifications/${id}/read`,
-        {
-            method: "PATCH",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error(
-            "Failed to update notification"
-        );
-    }
-
-    return response.json();
-}
-export async function getDashboardData() {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-        `${API_URL}/dashboard`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error(
-            "Failed to load dashboard"
-        );
-    }
-
-    return response.json();
-}
+export const api = {
+    auth: {
+        login: (data) => request("/auth/login", { method: "POST", body: JSON.stringify(data) }),
+        register: (data) => request("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+    },
+    user: { me: () => request("/users/me") },
+    profile: {
+        get: () => request("/profile"),
+        create: (data) => request("/profile", { method: "POST", body: JSON.stringify(data) }),
+        save: (data) => request("/profile", { method: "PUT", body: JSON.stringify(data) }),
+    },
+    goals: {
+        get: () => request("/goals"),
+        calculate: () => request("/goals/calculate", { method: "POST" }),
+    },
+    dashboard: (date) => request(`/dashboard?date=${encodeURIComponent(date)}`),
+    nutrition: {
+        daily: (date) => request(`/nutrition/daily?nutrition_date=${encodeURIComponent(date)}`),
+    },
+    meals: {
+        list: (date) => request(`/meals?meal_date=${encodeURIComponent(date)}`),
+        add: (data) => request("/meals", { method: "POST", body: JSON.stringify(data) }),
+        remove: (id) => request(`/meals/${id}`, { method: "DELETE" }),
+    },
+    water: {
+        daily: (date) => request(`/water/daily?water_date=${encodeURIComponent(date)}`),
+        history: () => request("/water"),
+        add: (data) => request("/water", { method: "POST", body: JSON.stringify(data) }),
+    },
+    workouts: {
+        list: () => request("/workouts"),
+        create: (data) => request("/workouts", { method: "POST", body: JSON.stringify(data) }),
+        exercises: () => request("/workouts/exercises"),
+        createExercise: (data) => request("/workouts/exercises", { method: "POST", body: JSON.stringify(data) }),
+        logs: (workoutId) => request(`/workouts/${workoutId}/exercises`),
+        addExercise: (workoutId, data) => request(`/workouts/${workoutId}/exercises`, { method: "POST", body: JSON.stringify(data) }),
+    },
+    activities: {
+        list: (date) => request(`/activities?activity_date=${encodeURIComponent(date)}`),
+        daily: (date) => request(`/activities/daily?activity_date=${encodeURIComponent(date)}`),
+        add: (data) => request("/activities", { method: "POST", body: JSON.stringify(data) }),
+    },
+    sleep: {
+        list: (date) => request(`/sleep?sleep_date=${encodeURIComponent(date)}`),
+        daily: (date) => request(`/sleep/daily?sleep_date=${encodeURIComponent(date)}`),
+        add: (data) => request("/sleep", { method: "POST", body: JSON.stringify(data) }),
+    },
+    weight: {
+        list: () => request("/weight"),
+        add: (data) => request("/weight", { method: "POST", body: JSON.stringify(data) }),
+    },
+    measurements: {
+        list: () => request("/measurements"),
+        add: (data) => request("/measurements", { method: "POST", body: JSON.stringify(data) }),
+    },
+    photos: {
+        list: () => request("/progress-photos"),
+        add: (data) => request("/progress-photos", { method: "POST", body: JSON.stringify(data) }),
+        remove: (id) => request(`/progress-photos/${id}`, { method: "DELETE" }),
+    },
+    ai: {
+        foodLog: (text, meal_type, date) => request("/ai/food-log", { method: "POST", body: JSON.stringify({ text, meal_type, date }) }),
+        dietAdvice: (date) => request(`/ai/diet-advice?date=${encodeURIComponent(date)}`),
+        trainerAdvice: () => request("/ai/trainer-advice"),
+        coach: (message) => request("/ai/coach", { method: "POST", body: JSON.stringify({ message }) }),
+        briefing: (date) => request(`/ai/daily-briefing?date=${encodeURIComponent(date)}`),
+    },
+    analytics: (days = 7) => request(`/analytics/progress?days=${days}`),
+    reports: {
+        weekly: () => request("/reports/weekly"),
+        monthly: () => request("/reports/monthly"),
+    },
+    recommendations: {
+        list: () => request("/recommendations"),
+        generate: () => request("/recommendations/generate", { method: "POST" }),
+    },
+    notifications: {
+        list: () => request("/notifications"),
+        generate: () => request("/notifications/generate", { method: "POST" }),
+        read: (id) => request(`/notifications/${id}/read`, { method: "PATCH" }),
+    },
+};
+
+export { API_URL };

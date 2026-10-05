@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -92,6 +92,20 @@ def generate_daily_notifications(
                 "type": "water"
             }
         )
+
+    # Skip alerts that were already generated today (the button can be pressed repeatedly)
+    # created_at is stored as naive UTC, so compare against the start of the UTC day
+    day_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    existing_today = {
+        (n.title, n.notification_type)
+        for n in db.query(Notification).filter(
+            Notification.user_id == user_id,
+            Notification.created_at >= day_start,
+        )
+    }
+    notifications = [
+        n for n in notifications if (n["title"], n["type"]) not in existing_today
+    ]
 
     # Save notifications
     saved = []

@@ -12,10 +12,11 @@ from app.models.sleep_log import SleepLog
 
 def get_progress_summary(
     db: Session,
-    user_id: int
+    user_id: int,
+    days: int = 7
 ):
     today = date.today()
-    start_date = today - timedelta(days=7)
+    start_date = today - timedelta(days=days)
 
     weights = (
         db.query(WeightLog)
@@ -117,6 +118,7 @@ def get_progress_summary(
 
     return {
         "period": {
+            "days": days,
             "start": start_date,
             "end": today
         },

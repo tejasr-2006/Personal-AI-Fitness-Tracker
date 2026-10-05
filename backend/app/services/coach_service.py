@@ -1,11 +1,4 @@
-import os
-
-from google import genai
-
-
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+from app.services.ai_client import generate_text
 
 
 def generate_coach_response(
@@ -80,9 +73,4 @@ Rules:
 - Keep the response reasonably concise.
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-
-    return response.text
+    return generate_text(prompt)

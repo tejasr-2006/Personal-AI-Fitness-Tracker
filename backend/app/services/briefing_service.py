@@ -1,12 +1,6 @@
 import json
-import os
 
-from google import genai
-
-
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+from app.services.ai_client import generate_json
 
 
 def generate_daily_briefing(
@@ -78,9 +72,4 @@ Rules:
 - Do not recommend extreme dieting or exercise.
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-
-    return json.loads(response.text)
+    return generate_json(prompt)

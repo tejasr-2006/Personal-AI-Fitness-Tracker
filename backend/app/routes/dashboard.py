@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -24,10 +24,11 @@ router = APIRouter(
 
 @router.get("")
 def get_dashboard(
+    on_date: date | None = Query(None, alias="date"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    today = date.today()
+    today = on_date or date.today()
 
     profile = (
         db.query(Profile)
@@ -42,14 +43,10 @@ def get_dashboard(
     )
 
     if not profile:
-        return {
-            "error": "Complete your profile first"
-        }
+        raise HTTPException(status_code=409, detail="Complete your profile first.")
 
     if not goal:
-        return {
-            "error": "Calculate your fitness goals first"
-        }
+        raise HTTPException(status_code=409, detail="Calculate your fitness goals first.")
 
     # Nutrition
     nutrition = calculate_daily_totals(
