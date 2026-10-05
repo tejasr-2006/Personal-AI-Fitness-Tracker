@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { getDashboard } from "../api";
 
-
 function Dashboard() {
     const [dashboard, setDashboard] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -18,6 +17,11 @@ function Dashboard() {
 
         getDashboard(token)
             .then((data) => {
+                if (data.error) {
+                    setError(data.error);
+                    return;
+                }
+
                 setDashboard(data);
             })
             .catch((err) => {
@@ -33,7 +37,16 @@ function Dashboard() {
     }
 
     if (error) {
-        return <p>{error}</p>;
+        return (
+            <div>
+                <h2>Dashboard Setup Required</h2>
+                <p>{error}</p>
+            </div>
+        );
+    }
+
+    if (!dashboard) {
+        return <p>No dashboard data available.</p>;
     }
 
     return (
@@ -49,15 +62,13 @@ function Dashboard() {
             <h3>Today's Nutrition</h3>
 
             <p>
-                Calories:{" "}
-                {dashboard.nutrition.calories_consumed}
+                Calories: {dashboard.nutrition.calories_consumed}
                 {" / "}
                 {dashboard.targets.calories}
             </p>
 
             <p>
-                Protein:{" "}
-                {dashboard.nutrition.protein_consumed}
+                Protein: {dashboard.nutrition.protein_consumed}
                 {" / "}
                 {dashboard.targets.protein} g
             </p>
@@ -77,8 +88,7 @@ function Dashboard() {
             </p>
 
             <p>
-                Calories Burned:{" "}
-                {dashboard.activity.calories_burned}
+                Calories Burned: {dashboard.activity.calories_burned}
             </p>
 
             <h3>Sleep</h3>
@@ -91,15 +101,13 @@ function Dashboard() {
             <h3>Workout</h3>
 
             <p>
-                Workouts today:{" "}
-                {dashboard.workouts.count}
+                Workouts today: {dashboard.workouts.count}
             </p>
 
             <h3>Weight</h3>
 
             <p>
-                Current Weight:{" "}
-                {dashboard.weight.current} kg
+                Current Weight: {dashboard.weight.current} kg
             </p>
         </div>
     );

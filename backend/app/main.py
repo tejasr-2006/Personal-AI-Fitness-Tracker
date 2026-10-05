@@ -14,7 +14,6 @@ from app.models.meal import Meal
 from app.routes.meals import router as meals_router
 from app.routes.nutrition import router as nutrition_router
 from app.routes.ai import router as ai_router
-from app.routes.ai import router as ai_router
 from app.routes.weight import router as weight_router
 from app.models.weight_log import WeightLog
 from app.models.water_log import WaterLog
@@ -69,7 +68,6 @@ app.include_router(goal_router)
 app.include_router(daily_log_router)
 app.include_router(meals_router)
 app.include_router(nutrition_router)
-app.include_router(ai_router)
 app.include_router(ai_router)
 app.include_router(weight_router)
 app.include_router(water_router)
