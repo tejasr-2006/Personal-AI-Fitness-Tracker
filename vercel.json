@@ -1,0 +1,280 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "frontend/",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "backend/",
+      "framework": "fastapi",
+      "entrypoint": "app.main:app"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/auth",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/users",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/users/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/profile",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/profile/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/goals",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/goals/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/daily-log",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/daily-log/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/dashboard",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/dashboard/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/meals",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/meals/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/nutrition",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/nutrition/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/ai",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/ai/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/weight",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/weight/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/water",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/water/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/supplements",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/supplements/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/workouts",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/workouts/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/activities",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/activities/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/sleep",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/sleep/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/measurements",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/measurements/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/progress-photos",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/progress-photos/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/analytics",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/analytics/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/recommendations",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/recommendations/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/reports",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/reports/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/notifications",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/notifications/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/health",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ]
+}
