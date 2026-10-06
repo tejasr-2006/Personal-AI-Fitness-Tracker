@@ -30,8 +30,12 @@ def _ai_call(fn, *args, **kwargs):
         return fn(*args, **kwargs)
     except AIUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc))
-    except Exception:
-        raise HTTPException(status_code=502, detail="The AI service failed. Please try again.")
+    except Exception as exc:
+        print(f"AI service error: {type(exc).__name__}: {exc}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"AI service error: {type(exc).__name__}: {exc}"
+        )    
 
 
 def _require_profile_and_goal(db: Session, user: User):
